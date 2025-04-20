@@ -18,11 +18,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import rw.agriconnect.dto.PaginatedResponse;
 import rw.agriconnect.dto.ProductRequestDTO;
 import rw.agriconnect.dto.ProductResponseDTO;
+import rw.agriconnect.model.Product;
 import rw.agriconnect.model.User;
 import rw.agriconnect.service.ProductService;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/products")
@@ -46,9 +51,10 @@ public class ProductController {
     })
     @CacheEvict(value = "products", allEntries = true)
     public ResponseEntity<ProductResponseDTO> createProduct(
-            @Valid @RequestBody ProductRequestDTO productDTO,
+            @RequestPart("product") Product product,
+            @RequestPart(value = "image", required = false) MultipartFile image,
             @AuthenticationPrincipal User farmer) {
-        ProductResponseDTO createdProduct = productService.createProduct(productDTO, farmer);
+        ProductResponseDTO createdProduct = productService.createProduct(product, image, farmer);
         return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
     }
 
@@ -62,10 +68,11 @@ public class ProductController {
     })
     @CacheEvict(value = "products", allEntries = true)
     public ResponseEntity<ProductResponseDTO> updateProduct(
-            @Parameter(description = "Product ID") @PathVariable Long id,
-            @Valid @RequestBody ProductRequestDTO productDTO,
+            @PathVariable Long id,
+            @RequestPart("product") Product product,
+            @RequestPart(value = "image", required = false) MultipartFile image,
             @AuthenticationPrincipal User farmer) {
-        ProductResponseDTO updatedProduct = productService.updateProduct(id, productDTO, farmer);
+        ProductResponseDTO updatedProduct = productService.updateProduct(id, product, image, farmer);
         return ResponseEntity.ok(updatedProduct);
     }
 
@@ -78,7 +85,7 @@ public class ProductController {
     })
     @CacheEvict(value = "products", allEntries = true)
     public ResponseEntity<Void> deleteProduct(
-            @Parameter(description = "Product ID") @PathVariable Long id,
+            @PathVariable Long id,
             @AuthenticationPrincipal User farmer) {
         productService.deleteProduct(id, farmer);
         return ResponseEntity.noContent().build();
@@ -123,7 +130,7 @@ public class ProductController {
         return ResponseEntity.ok(product);
     }
 
-    @GetMapping("/farmer/{farmerId}")
+    @GetMapping("/farmer")
     @Operation(summary = "Get products by farmer", description = "Retrieves all products for a specific farmer.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Successfully retrieved products"),
@@ -131,12 +138,13 @@ public class ProductController {
     })
     @Cacheable(value = "farmerProducts", key = "#farmerId + '-' + #page + '-' + #size")
     public ResponseEntity<PaginatedResponse<ProductResponseDTO>> getProductsByFarmer(
-            @Parameter(description = "Farmer ID") @PathVariable Long farmerId,
+            @AuthenticationPrincipal User farmer,
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        User farmer = new User();
-        farmer.setId(farmerId);
+            @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Sort field") @RequestParam(defaultValue = "createdAt") String sortBy,
+            @Parameter(description = "Sort direction") @RequestParam(defaultValue = "desc") String direction) {
+        Sort.Direction sortDirection = Sort.Direction.fromString(direction);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
         Page<ProductResponseDTO> productPage = productService.getProductsByFarmer(farmer, pageable);
         
         PaginatedResponse<ProductResponseDTO> response = new PaginatedResponse<>(
@@ -157,6 +165,10 @@ public class ProductController {
     })
     @Cacheable(value = "productSearch", key = "#query + '-' + #page + '-' + #size")
     public ResponseEntity<PaginatedResponse<ProductResponseDTO>> searchProducts(
+            @Parameter(description = "Search query") @RequestParam(required = false) String query,
+            @Parameter(description = "Search category") @RequestParam(required = false) String category,
+            @Parameter(description = "Minimum price") @RequestParam(required = false) Double minPrice,
+            @Parameter(description = "Maximum price") @RequestParam(required = false) Double maxPrice,
             @Parameter(description = "Search query") @RequestParam String query,
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "10") int size) {

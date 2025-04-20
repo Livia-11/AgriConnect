@@ -1,93 +1,100 @@
 package rw.agriconnect.service.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import rw.agriconnect.dto.ProductRequestDTO;
-import rw.agriconnect.dto.ProductResponseDTO;
-import rw.agriconnect.exception.ResourceNotFoundException;
-import rw.agriconnect.exception.UnauthorizedException;
+import org.springframework.web.multipart.MultipartFile;
 import rw.agriconnect.model.Product;
 import rw.agriconnect.model.User;
 import rw.agriconnect.repository.ProductRepository;
+import rw.agriconnect.service.FileStorageService;
 import rw.agriconnect.service.ProductService;
 
+import java.util.NoSuchElementException;
+
 @Service
-@CacheConfig(cacheNames = {"products", "farmerProducts", "productSearch"})
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
+    private final FileStorageService fileStorageService;
 
     @Autowired
-    public ProductServiceImpl(ProductRepository productRepository) {
+    public ProductServiceImpl(ProductRepository productRepository, FileStorageService fileStorageService) {
         this.productRepository = productRepository;
+        this.fileStorageService = fileStorageService;
     }
 
     @Override
-    public ProductResponseDTO createProduct(ProductRequestDTO productDTO, User farmer) {
-        Product product = new Product();
-        mapProductRequestDTOToProduct(productDTO, product);
-        product.setFarmer(farmer);
-        Product savedProduct = productRepository.save(product);
-        return ProductResponseDTO.fromProduct(savedProduct);
-    }
-
-    @Override
-    public ProductResponseDTO updateProduct(Long id, ProductRequestDTO productDTO, User farmer) {
-        Product existingProduct = getProductEntityById(id);
-        if (!existingProduct.getFarmer().equals(farmer)) {
-            throw new UnauthorizedException("You are not authorized to update this product");
+    public Product createProduct(Product product, MultipartFile image, User farmer) {
+        if (image != null && !image.isEmpty()) {
+            String imageUrl = fileStorageService.storeFile(image);
+            product.setImageUrl(imageUrl);
         }
-        mapProductRequestDTOToProduct(productDTO, existingProduct);
-        Product updatedProduct = productRepository.save(existingProduct);
-        return ProductResponseDTO.fromProduct(updatedProduct);
+        product.setFarmer(farmer);
+        return productRepository.save(product);
+    }
+
+    @Override
+    public Product updateProduct(Long id, Product product, MultipartFile image, User farmer) {
+        Product existingProduct = getProductById(id);
+        
+        if (!existingProduct.getFarmer().getId().equals(farmer.getId())) {
+            throw new SecurityException("You are not authorized to update this product");
+        }
+
+        if (image != null && !image.isEmpty()) {
+            String imageUrl = fileStorageService.storeFile(image);
+            product.setImageUrl(imageUrl);
+        } else {
+            product.setImageUrl(existingProduct.getImageUrl());
+        }
+
+        product.setId(id);
+        product.setFarmer(farmer);
+        return productRepository.save(product);
     }
 
     @Override
     public void deleteProduct(Long id, User farmer) {
-        Product product = getProductEntityById(id);
-        if (!product.getFarmer().equals(farmer)) {
-            throw new UnauthorizedException("You are not authorized to delete this product");
+        Product product = getProductById(id);
+        
+        if (!product.getFarmer().getId().equals(farmer.getId())) {
+            throw new SecurityException("You are not authorized to delete this product");
         }
+
+        if (product.getImageUrl() != null) {
+            fileStorageService.deleteFile(product.getImageUrl());
+        }
+        
         productRepository.delete(product);
     }
 
     @Override
-    public ProductResponseDTO getProductById(Long id) {
-        Product product = getProductEntityById(id);
-        return ProductResponseDTO.fromProduct(product);
-    }
-
-    @Override
-    public Page<ProductResponseDTO> getAllProducts(Pageable pageable) {
-        return productRepository.findAll(pageable)
-                .map(ProductResponseDTO::fromProduct);
-    }
-
-    @Override
-    public Page<ProductResponseDTO> getProductsByFarmer(User farmer, Pageable pageable) {
-        return productRepository.findByFarmer(farmer, pageable)
-                .map(ProductResponseDTO::fromProduct);
-    }
-
-    @Override
-    public Page<ProductResponseDTO> searchProducts(String query, Pageable pageable) {
-        return productRepository.findByTitleContainingIgnoreCaseOrDescriptionContainingIgnoreCase(query, query, pageable)
-                .map(ProductResponseDTO::fromProduct);
-    }
-
-    private Product getProductEntityById(Long id) {
+    public Product getProductById(Long id) {
         return productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+                .orElseThrow(() -> new NoSuchElementException("Product not found with id: " + id));
     }
 
-    private void mapProductRequestDTOToProduct(ProductRequestDTO dto, Product product) {
-        product.setTitle(dto.getTitle());
-        product.setDescription(dto.getDescription());
-        product.setPrice(dto.getPrice());
-        product.setQuantity(dto.getQuantity());
-        product.setCategory(dto.getCategory());
+    @Override
+    public Page<Product> getAllProducts(Pageable pageable) {
+        return productRepository.findAll(pageable);
+    }
+
+    @Override
+    public Page<Product> getProductsByFarmer(User farmer, Pageable pageable) {
+        return productRepository.findByFarmer(farmer, pageable);
+    }
+
+    @Override
+    public Page<Product> searchProducts(
+            String query,
+            String category,
+            Double minPrice,
+            Double maxPrice,
+            String location,
+            Pageable pageable
+    ) {
+        return productRepository.searchProducts(query, category, minPrice, maxPrice, location, pageable);
     }
 } 
