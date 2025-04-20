@@ -135,7 +135,9 @@ public class ProductController {
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ProductResponseDTO> productPage = productService.getProductsByFarmer(new User(farmerId), pageable);
+        User farmer = new User();
+        farmer.setId(farmerId);
+        Page<ProductResponseDTO> productPage = productService.getProductsByFarmer(farmer, pageable);
         
         PaginatedResponse<ProductResponseDTO> response = new PaginatedResponse<>(
             productPage.getContent(),

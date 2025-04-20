@@ -30,7 +30,7 @@ public class ProductResponseDTO {
         User farmer = product.getFarmer();
         if (farmer != null) {
             dto.setFarmerId(farmer.getId());
-            dto.setFarmerName(farmer.getFullName());
+            dto.setFarmerName(farmer.getUsername());
         }
         
         dto.setCreatedAt(product.getCreatedAt());

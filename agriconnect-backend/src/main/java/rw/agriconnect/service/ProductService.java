@@ -2,15 +2,16 @@ package rw.agriconnect.service;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import rw.agriconnect.model.Product;
+import rw.agriconnect.dto.ProductRequestDTO;
+import rw.agriconnect.dto.ProductResponseDTO;
 import rw.agriconnect.model.User;
 
 public interface ProductService {
-    Product createProduct(Product product, User farmer);
-    Product updateProduct(Long id, Product product, User farmer);
+    ProductResponseDTO createProduct(ProductRequestDTO productDTO, User farmer);
+    ProductResponseDTO updateProduct(Long id, ProductRequestDTO productDTO, User farmer);
     void deleteProduct(Long id, User farmer);
-    Product getProductById(Long id);
-    Page<Product> getAllProducts(Pageable pageable);
-    Page<Product> getProductsByFarmer(User farmer, Pageable pageable);
-    Page<Product> searchProducts(String query, Pageable pageable);
+    ProductResponseDTO getProductById(Long id);
+    Page<ProductResponseDTO> getAllProducts(Pageable pageable);
+    Page<ProductResponseDTO> getProductsByFarmer(User farmer, Pageable pageable);
+    Page<ProductResponseDTO> searchProducts(String query, Pageable pageable);
 } 

@@ -22,22 +22,16 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
 
     public AuthResponse register(RegisterRequest request) {
-        var user = User.builder()
-                .username(request.getUsername())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole())
-                .build();
+        var user = new User();
+        user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRole(request.getRole());
         
         userRepository.save(user);
         var jwtToken = jwtService.generateToken(user);
         
-        return AuthResponse.builder()
-                .token(jwtToken)
-                .email(user.getEmail())
-                .username(user.getUsername())
-                .role(user.getRole())
-                .build();
+        return new AuthResponse(jwtToken, user.getEmail(), user.getUsername(), user.getRole());
     }
 
     public AuthResponse login(AuthRequest request) {
@@ -53,11 +47,6 @@ public class AuthService {
         
         var jwtToken = jwtService.generateToken(user);
         
-        return AuthResponse.builder()
-                .token(jwtToken)
-                .email(user.getEmail())
-                .username(user.getUsername())
-                .role(user.getRole())
-                .build();
+        return new AuthResponse(jwtToken, user.getEmail(), user.getUsername(), user.getRole());
     }
 } 
