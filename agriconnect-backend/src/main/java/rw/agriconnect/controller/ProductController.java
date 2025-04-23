@@ -51,11 +51,13 @@ public class ProductController {
     })
     @CacheEvict(value = "products", allEntries = true)
     public ResponseEntity<ProductResponseDTO> createProduct(
-            @RequestPart("product") Product product,
+            @Valid @RequestPart("product") ProductRequestDTO productRequest,
             @RequestPart(value = "image", required = false) MultipartFile image,
             @AuthenticationPrincipal User farmer) {
-        ProductResponseDTO createdProduct = productService.createProduct(product, image, farmer);
-        return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
+        Product product = productRequest.toProduct();
+        Product createdProduct = productService.createProduct(product, image, farmer);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                           .body(ProductResponseDTO.fromProduct(createdProduct));
     }
 
     @PutMapping("/{id}")
@@ -69,11 +71,12 @@ public class ProductController {
     @CacheEvict(value = "products", allEntries = true)
     public ResponseEntity<ProductResponseDTO> updateProduct(
             @PathVariable Long id,
-            @RequestPart("product") Product product,
+            @Valid @RequestPart("product") ProductRequestDTO productRequest,
             @RequestPart(value = "image", required = false) MultipartFile image,
             @AuthenticationPrincipal User farmer) {
-        ProductResponseDTO updatedProduct = productService.updateProduct(id, product, image, farmer);
-        return ResponseEntity.ok(updatedProduct);
+        Product product = productRequest.toProduct();
+        Product updatedProduct = productService.updateProduct(id, product, image, farmer);
+        return ResponseEntity.ok(ProductResponseDTO.fromProduct(updatedProduct));
     }
 
     @DeleteMapping("/{id}")
@@ -97,24 +100,15 @@ public class ProductController {
         @ApiResponse(responseCode = "200", description = "Successfully retrieved products")
     })
     @Cacheable(value = "products", key = "#page + '-' + #size")
-    public ResponseEntity<PaginatedResponse<ProductResponseDTO>> getAllProducts(
+    public ResponseEntity<Map<String, Object>> getAllProducts(
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "Sort field") @RequestParam(defaultValue = "createdAt") String sortBy,
             @Parameter(description = "Sort direction") @RequestParam(defaultValue = "desc") String direction) {
         Sort.Direction sortDirection = Sort.Direction.fromString(direction);
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
-        Page<ProductResponseDTO> productPage = productService.getAllProducts(pageable);
-        
-        PaginatedResponse<ProductResponseDTO> response = new PaginatedResponse<>(
-            productPage.getContent(),
-            productPage.getNumber(),
-            productPage.getSize(),
-            productPage.getTotalElements(),
-            productPage.getTotalPages()
-        );
-        
-        return ResponseEntity.ok(response);
+        Page<Product> products = productService.getAllProducts(pageable);
+        return ResponseEntity.ok(createPagedResponse(products.map(ProductResponseDTO::fromProduct)));
     }
 
     @GetMapping("/{id}")
@@ -126,8 +120,8 @@ public class ProductController {
     @Cacheable(value = "products", key = "#id")
     public ResponseEntity<ProductResponseDTO> getProductById(
             @Parameter(description = "Product ID") @PathVariable Long id) {
-        ProductResponseDTO product = productService.getProductById(id);
-        return ResponseEntity.ok(product);
+        Product product = productService.getProductById(id);
+        return ResponseEntity.ok(ProductResponseDTO.fromProduct(product));
     }
 
     @GetMapping("/farmer")
@@ -136,8 +130,8 @@ public class ProductController {
         @ApiResponse(responseCode = "200", description = "Successfully retrieved products"),
         @ApiResponse(responseCode = "404", description = "Farmer not found")
     })
-    @Cacheable(value = "farmerProducts", key = "#farmerId + '-' + #page + '-' + #size")
-    public ResponseEntity<PaginatedResponse<ProductResponseDTO>> getProductsByFarmer(
+    @Cacheable(value = "farmerProducts", key = "#farmer.id + '-' + #page + '-' + #size")
+    public ResponseEntity<Map<String, Object>> getProductsByFarmer(
             @AuthenticationPrincipal User farmer,
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "10") int size,
@@ -145,17 +139,8 @@ public class ProductController {
             @Parameter(description = "Sort direction") @RequestParam(defaultValue = "desc") String direction) {
         Sort.Direction sortDirection = Sort.Direction.fromString(direction);
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
-        Page<ProductResponseDTO> productPage = productService.getProductsByFarmer(farmer, pageable);
-        
-        PaginatedResponse<ProductResponseDTO> response = new PaginatedResponse<>(
-            productPage.getContent(),
-            productPage.getNumber(),
-            productPage.getSize(),
-            productPage.getTotalElements(),
-            productPage.getTotalPages()
-        );
-        
-        return ResponseEntity.ok(response);
+        Page<Product> products = productService.getProductsByFarmer(farmer, pageable);
+        return ResponseEntity.ok(createPagedResponse(products.map(ProductResponseDTO::fromProduct)));
     }
 
     @GetMapping("/search")
@@ -164,25 +149,30 @@ public class ProductController {
         @ApiResponse(responseCode = "200", description = "Successfully retrieved products")
     })
     @Cacheable(value = "productSearch", key = "#query + '-' + #page + '-' + #size")
-    public ResponseEntity<PaginatedResponse<ProductResponseDTO>> searchProducts(
+    public ResponseEntity<Map<String, Object>> searchProducts(
             @Parameter(description = "Search query") @RequestParam(required = false) String query,
             @Parameter(description = "Search category") @RequestParam(required = false) String category,
             @Parameter(description = "Minimum price") @RequestParam(required = false) Double minPrice,
             @Parameter(description = "Maximum price") @RequestParam(required = false) Double maxPrice,
-            @Parameter(description = "Search query") @RequestParam String query,
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<ProductResponseDTO> productPage = productService.searchProducts(query, pageable);
-        
-        PaginatedResponse<ProductResponseDTO> response = new PaginatedResponse<>(
-            productPage.getContent(),
-            productPage.getNumber(),
-            productPage.getSize(),
-            productPage.getTotalElements(),
-            productPage.getTotalPages()
+            @Parameter(description = "Number of items per page") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Sort field") @RequestParam(defaultValue = "createdAt") String sortBy,
+            @Parameter(description = "Sort direction") @RequestParam(defaultValue = "desc") String direction) {
+        Sort.Direction sortDirection = Sort.Direction.fromString(direction);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+        Page<Product> products = productService.searchProducts(
+            query, category, minPrice, maxPrice, pageable
         );
-        
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(createPagedResponse(products.map(ProductResponseDTO::fromProduct)));
+    }
+
+    private Map<String, Object> createPagedResponse(Page<ProductResponseDTO> page) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", page.getContent());
+        response.put("currentPage", page.getNumber());
+        response.put("totalItems", page.getTotalElements());
+        response.put("totalPages", page.getTotalPages());
+        response.put("pageSize", page.getSize());
+        return response;
     }
 } 

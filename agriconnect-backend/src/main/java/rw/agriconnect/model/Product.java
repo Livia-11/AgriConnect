@@ -33,7 +33,6 @@ public class Product {
     @Column(nullable = false)
     private String category;
 
-    @Column(nullable = false)
     private String imageUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -57,5 +56,95 @@ public class Product {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    // Getters
+    public Long getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public Double getPrice() {
+        return price;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public String getUnit() {
+        return unit;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public User getFarmer() {
+        return farmer;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    // Setters
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setPrice(Double price) {
+        this.price = price;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
+    }
+
+    public void setUnit(String unit) {
+        this.unit = unit;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public void setFarmer(User farmer) {
+        this.farmer = farmer;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 } 

@@ -92,9 +92,8 @@ public class ProductServiceImpl implements ProductService {
             String category,
             Double minPrice,
             Double maxPrice,
-            String location,
             Pageable pageable
     ) {
-        return productRepository.searchProducts(query, category, minPrice, maxPrice, location, pageable);
+        return productRepository.searchProducts(query, category, minPrice, maxPrice, pageable);
     }
 } 

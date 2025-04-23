@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import rw.agriconnect.model.Product;
 
 @Data
 public class ProductRequestDTO {
@@ -26,4 +27,14 @@ public class ProductRequestDTO {
 
     @NotBlank(message = "Category is required")
     private String category;
+
+    public Product toProduct() {
+        Product product = new Product();
+        product.setTitle(this.title);
+        product.setDescription(this.description);
+        product.setPrice(this.price);
+        product.setQuantity(this.quantity);
+        product.setCategory(this.category);
+        return product;
+    }
 } 

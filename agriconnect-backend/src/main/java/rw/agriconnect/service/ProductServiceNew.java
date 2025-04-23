@@ -6,7 +6,7 @@ import org.springframework.web.multipart.MultipartFile;
 import rw.agriconnect.model.Product;
 import rw.agriconnect.model.User;
 
-public interface ProductService {
+public interface ProductServiceNew {
     Product createProduct(Product product, MultipartFile image, User farmer);
     Product updateProduct(Long id, Product product, MultipartFile image, User farmer);
     void deleteProduct(Long id, User farmer);
@@ -18,6 +18,7 @@ public interface ProductService {
         String category,
         Double minPrice,
         Double maxPrice,
+        String location,
         Pageable pageable
     );
 } 
