@@ -1,4 +1,4 @@
-package rw.agriconnect.backend;
+package rw.agriconnect;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -16,15 +16,17 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 })
 @EntityScan(basePackages = {
     "rw.agriconnect.model",
-    "rw.agriconnect.backend.model"
+    "rw.agriconnect.model"
 })
 @EnableJpaRepositories(basePackages = {
     "rw.agriconnect.repository",
-    "rw.agriconnect.backend.repository"
+    "rw.agriconnect.repository"
 })
 @EnableTransactionManagement
 public class AgriConnectBackendApplication {
     public static void main(String[] args) {
-        SpringApplication.run(AgriConnectBackendApplication.class, args);
+        SpringApplication application = new SpringApplication(AgriConnectBackendApplication.class);
+        application.setAdditionalProfiles("dev");
+        application.run(args);
     }
 } 

@@ -22,6 +22,12 @@ public class AuthController {
         return ResponseEntity.ok(authService.register(request));
     }
 
+    @GetMapping("/check")
+    public ResponseEntity<Void> checkStatus() {
+        // Perform some check (e.g., service or database availability)
+        return ResponseEntity.ok().build(); // Returns HTTP 200 OK with no body
+    }
+
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
         return ResponseEntity.ok(authService.login(request));
